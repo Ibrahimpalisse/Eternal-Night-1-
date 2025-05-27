@@ -1,0 +1,242 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Configuration du fond de base */
+@layer base {
+  :root {
+    --background: 260 40% 10%; /* Un violet profond pour une ambiance nocturne */
+    --foreground: 0 0% 98%;
+    --card: 240 30% 8%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 30% 8%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 240 25% 15%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 25% 15%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 262 83% 58%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 30% 20%;
+    --input: 240 30% 20%;
+    --ring: 240 5% 65%;
+    --radius: 0.5rem;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+
+  .dark {
+    --background: 260 40% 8%; /* Une version légèrement plus sombre pour le mode sombre */
+    --foreground: 0 0% 98%;
+    --card: 240 30% 6%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 30% 6%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 240 25% 12%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 25% 12%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 262 83% 58%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 30% 15%;
+    --input: 240 30% 15%;
+    --ring: 240 5% 65%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+
+  * {
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    width: 100%;
+    min-height: 100vh;
+    min-height: 100dvh;
+    background: hsl(var(--background));
+    color: hsl(var(--foreground));
+    margin: 0;
+    padding: 0;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* Conteneur pour les étoiles */
+  body::before,
+  body::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  /* Petites étoiles blanches */
+  body::before {
+    background-image: 
+      radial-gradient(1px 1px at 30% 50%, rgba(255, 255, 255, 0.6) 50%, transparent 100%),
+      radial-gradient(1px 1px at 60% 30%, rgba(255, 255, 255, 0.5) 50%, transparent 100%),
+      radial-gradient(1px 1px at 20% 80%, rgba(255, 255, 255, 0.4) 50%, transparent 100%),
+      radial-gradient(1px 1px at 80% 20%, rgba(255, 255, 255, 0.5) 50%, transparent 100%),
+      radial-gradient(1px 1px at 10% 60%, rgba(255, 255, 255, 0.4) 50%, transparent 100%),
+      radial-gradient(1px 1px at 90% 70%, rgba(255, 255, 255, 0.3) 50%, transparent 100%),
+      radial-gradient(1px 1px at 45% 15%, rgba(255, 255, 255, 0.5) 50%, transparent 100%),
+      radial-gradient(1px 1px at 75% 45%, rgba(255, 255, 255, 0.4) 50%, transparent 100%),
+      radial-gradient(1px 1px at 15% 35%, rgba(255, 255, 255, 0.3) 50%, transparent 100%),
+      radial-gradient(1px 1px at 85% 85%, rgba(255, 255, 255, 0.4) 50%, transparent 100%),
+      radial-gradient(1px 1px at 35% 70%, rgba(255, 255, 255, 0.5) 50%, transparent 100%),
+      radial-gradient(1px 1px at 65% 10%, rgba(255, 255, 255, 0.3) 50%, transparent 100%),
+      radial-gradient(1px 1px at 5% 25%, rgba(255, 255, 255, 0.4) 50%, transparent 100%),
+      radial-gradient(1px 1px at 95% 35%, rgba(255, 255, 255, 0.3) 50%, transparent 100%),
+      radial-gradient(1px 1px at 25% 95%, rgba(255, 255, 255, 0.4) 50%, transparent 100%),
+      radial-gradient(1px 1px at 55% 55%, rgba(255, 255, 255, 0.5) 50%, transparent 100%);
+    background-size: 100% 100%;
+    animation: stars-move-small 120s infinite linear;
+    opacity: 0.8;
+  }
+
+  /* Étoiles moyennes colorées */
+  body::after {
+    background-image: 
+      radial-gradient(1.5px 1.5px at 40% 20%, rgba(175, 130, 245, 0.6) 50%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 70% 90%, rgba(175, 130, 245, 0.5) 50%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 10% 40%, rgba(190, 170, 255, 0.5) 50%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 90% 60%, rgba(168, 85, 247, 0.4) 50%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 25% 75%, rgba(147, 51, 234, 0.5) 50%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 75% 25%, rgba(196, 181, 253, 0.4) 50%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 50% 5%, rgba(168, 85, 247, 0.5) 50%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 15% 85%, rgba(139, 92, 246, 0.4) 50%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 85% 15%, rgba(196, 181, 253, 0.5) 50%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 35% 50%, rgba(147, 51, 234, 0.4) 50%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 65% 80%, rgba(168, 85, 247, 0.5) 50%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 5% 65%, rgba(175, 130, 245, 0.4) 50%, transparent 100%);
+    background-size: 130% 130%;
+    animation: stars-move-medium 180s infinite linear;
+    opacity: 0.7;
+  }
+}
+
+/* Animations des étoiles */
+@keyframes stars-move-small {
+  0% { 
+    background-position: 0% 0%; 
+  }
+  100% { 
+    background-position: 100% 100%; 
+  }
+}
+
+@keyframes stars-move-medium {
+  0% { 
+    background-position: 100% 0%; 
+  }
+  100% { 
+    background-position: 0% 100%; 
+  }
+}
+
+/* Classe utilitaire pour les conteneurs avec fond étoilé */
+.stars-background {
+  position: relative;
+  min-height: 100vh;
+}
+
+.stars-background::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    radial-gradient(2px 2px at 15% 25%, rgba(190, 170, 255, 0.7) 50%, transparent 100%),
+    radial-gradient(2px 2px at 85% 75%, rgba(190, 170, 255, 0.6) 50%, transparent 100%),
+    radial-gradient(2px 2px at 45% 85%, rgba(168, 85, 247, 0.5) 50%, transparent 100%),
+    radial-gradient(2px 2px at 25% 45%, rgba(147, 51, 234, 0.6) 50%, transparent 100%),
+    radial-gradient(2px 2px at 75% 15%, rgba(196, 181, 253, 0.5) 50%, transparent 100%),
+    radial-gradient(2px 2px at 55% 35%, rgba(139, 92, 246, 0.6) 50%, transparent 100%),
+    radial-gradient(2px 2px at 5% 75%, rgba(168, 85, 247, 0.5) 50%, transparent 100%),
+    radial-gradient(2px 2px at 95% 25%, rgba(190, 170, 255, 0.6) 50%, transparent 100%),
+    radial-gradient(2px 2px at 35% 5%, rgba(147, 51, 234, 0.5) 50%, transparent 100%),
+    radial-gradient(2px 2px at 65% 95%, rgba(196, 181, 253, 0.6) 50%, transparent 100%);
+  background-size: 150% 150%;
+  animation: stars-move-large 240s infinite linear;
+  opacity: 0.6;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Couche d'étoiles scintillantes supplémentaires */
+.stars-background::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    radial-gradient(0.5px 0.5px at 12% 18%, rgba(255, 255, 255, 0.8) 50%, transparent 100%),
+    radial-gradient(0.5px 0.5px at 88% 82%, rgba(255, 255, 255, 0.6) 50%, transparent 100%),
+    radial-gradient(0.5px 0.5px at 33% 67%, rgba(255, 255, 255, 0.7) 50%, transparent 100%),
+    radial-gradient(0.5px 0.5px at 77% 23%, rgba(255, 255, 255, 0.5) 50%, transparent 100%),
+    radial-gradient(0.5px 0.5px at 21% 89%, rgba(255, 255, 255, 0.6) 50%, transparent 100%),
+    radial-gradient(0.5px 0.5px at 66% 44%, rgba(255, 255, 255, 0.8) 50%, transparent 100%),
+    radial-gradient(0.5px 0.5px at 7% 56%, rgba(255, 255, 255, 0.5) 50%, transparent 100%),
+    radial-gradient(0.5px 0.5px at 93% 11%, rgba(255, 255, 255, 0.7) 50%, transparent 100%),
+    radial-gradient(0.5px 0.5px at 41% 92%, rgba(255, 255, 255, 0.6) 50%, transparent 100%),
+    radial-gradient(0.5px 0.5px at 59% 8%, rgba(255, 255, 255, 0.5) 50%, transparent 100%);
+  background-size: 200% 200%;
+  animation: stars-twinkle 80s infinite linear;
+  opacity: 0.4;
+  pointer-events: none;
+  z-index: -1;
+}
+
+@keyframes stars-move-large {
+  0% { 
+    background-position: 50% 0%; 
+  }
+  100% { 
+    background-position: 50% 100%; 
+  }
+}
+
+@keyframes stars-twinkle {
+  0% { 
+    background-position: 0% 0%;
+    opacity: 0.4;
+  }
+  25% { 
+    background-position: 25% 25%;
+    opacity: 0.6;
+  }
+  50% { 
+    background-position: 50% 50%;
+    opacity: 0.3;
+  }
+  75% { 
+    background-position: 75% 75%;
+    opacity: 0.7;
+  }
+  100% { 
+    background-position: 100% 100%;
+    opacity: 0.4;
+  }
+}

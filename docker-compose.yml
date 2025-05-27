@@ -1,0 +1,35 @@
+version: '3.8'
+services:
+  database:
+    image: mysql:8.0
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: eternal-night
+      MYSQL_USER: user
+      MYSQL_PASSWORD: "password"
+    ports:
+      - "3307:3306"
+    volumes:
+      - eternal_night_db_data:/var/lib/mysql
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    ports:
+      - "8081:80"
+    environment:
+      PMA_HOST: database
+      PMA_USER: root
+      PMA_PASSWORD: root
+      UPLOAD_LIMIT: 300M
+    depends_on:
+      - database
+
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+volumes:
+  eternal_night_db_data:
