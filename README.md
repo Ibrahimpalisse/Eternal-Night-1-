@@ -10,19 +10,9 @@ docker-compose up -d
 - phpMyAdmin : http://localhost:8081 (user: root, password: root)
 - Mailhog : http://localhost:8025 (SMTP: localhost:1025)
 
-## Lancer le frontend
+## Lancer le projet
 
 ```sh
-cd frontend
-npm install
-npm run dev
-```
-
-## Lancer le backend
-
-```sh
-cd backend
-npm install
 npm run dev
 ```
 

@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <path d="M256 160c16-63.16 76.43-95.41 208-96a15.94 15.94 0 0116 16v288a16 16 0 01-16 16c-128 0-177.45 25.81-208 64-30.37-38-80-64-208-64-9.88 0-16-8.05-16-17.93V80a15.94 15.94 0 0116-16c131.57.59 192 32.84 208 96z" fill="#f8e6e6" stroke="#8b4513" stroke-width="8"/>
+  <path d="M256 160v288" stroke="#8b4513" stroke-width="4" stroke-linecap="round"/>
+  <path d="M256 160c-16-63.16-76.43-95.41-208-96" stroke="#8b4513" stroke-width="4" fill="none"/>
+  <path d="M256 160c16-63.16 76.43-95.41 208-96" stroke="#8b4513" stroke-width="4" fill="none"/>
+  <path d="M48 80v288c128 0 177.45 25.81 208 64" stroke="#8b4513" stroke-width="4" fill="none"/>
+  <path d="M464 80v288c-128 0-177.45 25.81-208 64" stroke="#8b4513" stroke-width="4" fill="none"/>
+  <!-- Lignes de texte sur les pages -->
+  <path d="M100 140h100" stroke="#8b4513" stroke-width="1" stroke-linecap="round"/>
+  <path d="M100 160h120" stroke="#8b4513" stroke-width="1" stroke-linecap="round"/>
+  <path d="M100 180h80" stroke="#8b4513" stroke-width="1" stroke-linecap="round"/>
+  <path d="M100 200h100" stroke="#8b4513" stroke-width="1" stroke-linecap="round"/>
+  <path d="M100 220h120" stroke="#8b4513" stroke-width="1" stroke-linecap="round"/>
+  <path d="M100 240h90" stroke="#8b4513" stroke-width="1" stroke-linecap="round"/>
+  <path d="M100 260h110" stroke="#8b4513" stroke-width="1" stroke-linecap="round"/>
+  <path d="M100 280h100" stroke="#8b4513" stroke-width="1" stroke-linecap="round"/>
+  
+  <path d="M300 140h100" stroke="#8b4513" stroke-width="1" stroke-linecap="round"/>
+  <path d="M300 160h120" stroke="#8b4513" stroke-width="1" stroke-linecap="round"/>
+  <path d="M300 180h80" stroke="#8b4513" stroke-width="1" stroke-linecap="round"/>
+  <path d="M300 200h100" stroke="#8b4513" stroke-width="1" stroke-linecap="round"/>
+  <path d="M300 220h120" stroke="#8b4513" stroke-width="1" stroke-linecap="round"/>
+  <path d="M300 240h90" stroke="#8b4513" stroke-width="1" stroke-linecap="round"/>
+  <path d="M300 260h110" stroke="#8b4513" stroke-width="1" stroke-linecap="round"/>
+  <path d="M300 280h100" stroke="#8b4513" stroke-width="1" stroke-linecap="round"/>
+  
+  <!-- Couverture du livre -->
+  <path d="M48 368h416v16a16 16 0 01-16 16H64a16 16 0 01-16-16v-16z" fill="#8b4513"/>
+  <!-- Bordure jaune -->
+  <path d="M48 368h416" stroke="#ffd700" stroke-width="4"/>
+  <path d="M48 80v288" stroke="#ffd700" stroke-width="4" stroke-linecap="round"/>
+  <path d="M464 80v288" stroke="#ffd700" stroke-width="4" stroke-linecap="round"/>
+</svg> 
