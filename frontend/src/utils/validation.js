@@ -70,6 +70,18 @@ export class FormValidation {
       };
     }
   }
+   // Fonction pour valider si une chaîne ne contient que des chiffres
+   static validateDigits(value) {
+    try {
+      z.string().regex(/^\d+$/, { message: "Le champ doit contenir uniquement des chiffres" }).parse(value);
+      return { success: true };
+    } catch (error) {
+      return { 
+        success: false, 
+        error: error.errors[0]?.message || "Champ invalide" 
+      };
+    }
+  }
 
   // Fonction pour valider un formulaire complet
   static validateForm(formType, data) {

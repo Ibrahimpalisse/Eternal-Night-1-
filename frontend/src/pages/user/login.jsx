@@ -4,9 +4,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import openBookLogo from '../../assets/open-book.svg';
 import { FormValidation } from '../../utils/validation';
+import SendVerificationEmail from '../../components/SendVerificationEmail';
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
+  const [showSendVerificationEmail, setShowSendVerificationEmail] = useState(false);
   
   // Utiliser react-hook-form avec validation Zod
   const { 
@@ -22,6 +24,15 @@ const Login = () => {
       rememberMe: false
     }
   });
+  
+  const handleForgotPasswordClick = (e) => {
+    e.preventDefault();
+    setShowSendVerificationEmail(true);
+  };
+  
+  const handleClosePopup = () => {
+    setShowSendVerificationEmail(false);
+  };
   
   // Fonction appelée lorsque le formulaire est valide
   const onSubmit = (data) => {
@@ -60,6 +71,7 @@ const Login = () => {
             Sign in to continue your reading journey
           </p>
         </div>
+        
         {/* Login form */}
         <div className="w-full max-w-md px-4 animate-fade-in-up">
           <div className="bg-white/[0.07] backdrop-blur-xl rounded-2xl p-6 md:p-8 border border-white/20 shadow-[0_8px_32px_rgb(0_0_0/0.4)] transition-all duration-300 hover:shadow-purple-500/10">
@@ -124,9 +136,13 @@ const Login = () => {
                   </label>
                 </div>
                 <div className="text-sm">
-                  <Link to="/auth/forgot-password" className="font-medium text-purple-400 hover:text-purple-300 transition-colors duration-200 hover:underline">
-                    Forgot password?
-                  </Link>
+                  <button 
+                    type="button"
+                    onClick={handleForgotPasswordClick} 
+                    className="font-medium text-purple-400 hover:text-purple-300 transition-colors duration-200 hover:underline"
+                  >
+                    Mot de passe oublié ?
+                  </button>
                 </div>
               </div>
               
@@ -164,6 +180,26 @@ const Login = () => {
             </p>
           </div>
         </div>
+        
+        {/* Popup overlay for SendVerificationEmail */}
+         {showSendVerificationEmail && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
+            <div className="relative w-full max-w-md">
+              <div className="absolute top-4 right-8 z-10">
+                <button 
+                  onClick={handleClosePopup}
+                  className="text-white/80 hover:text-white transition-all duration-200 bg-white/10 hover:bg-white/20 rounded-full p-1"
+                  aria-label="Fermer"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <SendVerificationEmail />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
