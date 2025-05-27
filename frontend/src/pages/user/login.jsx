@@ -1,30 +1,32 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import openBookLogo from '../../assets/open-book.svg';
+import { FormValidation } from '../../utils/validation';
 
 const Login = () => {
-  
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    rememberMe: false
-  });
   const [showPassword, setShowPassword] = useState(false);
   
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev, 
-      [name]: type === 'checkbox' ? checked : value
-    }));
-  };
-
-  // Modified handleSubmit to just log form data
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    console.log('Form submitted with data:', formData);
-    // Add any client-side validation or UI logic here if needed
+  // Utiliser react-hook-form avec validation Zod
+  const { 
+    register, 
+    handleSubmit, 
+    formState: { errors, isValid, isSubmitting }
+  } = useForm({
+    resolver: zodResolver(FormValidation.loginSchema),
+    mode: 'onChange',
+    defaultValues: {
+      email: '',
+      password: '',
+      rememberMe: false
+    }
+  });
+  
+  // Fonction appelée lorsque le formulaire est valide
+  const onSubmit = (data) => {
+    console.log('Form submitted with data:', data);
+    // Ici, ajouter la logique pour l'envoi des données au serveur
   };
 
   return (
@@ -61,38 +63,34 @@ const Login = () => {
         {/* Login form */}
         <div className="w-full max-w-md px-4 animate-fade-in-up">
           <div className="bg-white/[0.07] backdrop-blur-xl rounded-2xl p-6 md:p-8 border border-white/20 shadow-[0_8px_32px_rgb(0_0_0/0.4)] transition-all duration-300 hover:shadow-purple-500/10">
-            <form onSubmit={handleSubmit} className="space-y-6">
-              
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               
               <div className="group">
                 <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2 transition-colors group-focus-within:text-purple-400">
                   Email address
                 </label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  required
-                  value={formData.email}
-                  onChange={handleChange}
-                  className={`w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-purple-500/50`}
-                  placeholder="Enter your email"
-                />
+                <div className="relative">
+                  <input
+                    id="email"
+                    type="email"
+                    className={`w-full px-4 py-3 bg-white/10 border ${errors.email ? 'border-red-500' : 'border-white/20'} rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-purple-500/50`}
+                    placeholder="Enter your email"
+                    {...register('email')}
+                  />
+                </div>
               </div>
+              
               <div className="group">
                 <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2 transition-colors group-focus-within:text-purple-400">
                   Password
                 </label>
-                <div className="relative group">
+                <div className="relative">
                   <input
                     id="password"
-                    name="password"
                     type={showPassword ? "text" : "password"}
-                    required
-                    value={formData.password}
-                    onChange={handleChange}
-                    className={`w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-purple-500/50`}
+                    className={`w-full px-4 py-3 bg-white/10 border ${errors.password ? 'border-red-500' : 'border-white/20'} rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-purple-500/50 pr-10`}
                     placeholder="Enter your password"
+                    {...register('password')}
                   />
                   <button
                     type="button"
@@ -112,15 +110,14 @@ const Login = () => {
                   </button>
                 </div>
               </div>
+              
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <input
                     id="rememberMe"
-                    name="rememberMe"
                     type="checkbox"
-                    checked={formData.rememberMe}
-                    onChange={handleChange}
                     className="h-4 w-4 rounded border-gray-600 text-purple-500 focus:ring-purple-500 bg-white/10 transition-colors duration-200"
+                    {...register('rememberMe')}
                   />
                   <label htmlFor="rememberMe" className="ml-2 block text-sm text-gray-300 hover:text-white transition-colors duration-200">
                     Remember me
@@ -132,16 +129,26 @@ const Login = () => {
                   </Link>
                 </div>
               </div>
+              
               <button
                 type="submit"
-                className="group relative w-full bg-gradient-to-r from-purple-600 to-purple-500 text-white py-3 px-4 rounded-xl flex justify-center items-center font-medium hover:from-purple-500 hover:to-purple-400 transition-all duration-300 shadow-lg shadow-purple-500/20 hover:shadow-purple-500/30 transform hover:scale-[1.02] active:scale-[0.98]"
+                disabled={!isValid || isSubmitting}
+                className={`group relative w-full bg-gradient-to-r from-purple-600 to-purple-500 text-white py-3 px-4 rounded-xl flex justify-center items-center font-medium transition-all duration-300 shadow-lg shadow-purple-500/20 ${!isValid ? 'opacity-50 cursor-not-allowed' : 'hover:from-purple-500 hover:to-purple-400 hover:shadow-purple-500/30 transform hover:scale-[1.02] active:scale-[0.98]'}`}
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-purple-400/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl"></div>
                 <span className="relative z-10 flex items-center">
-                  Sign in
+                  {isSubmitting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                      Signing in...
+                    </>
+                  ) : (
+                    'Sign in'
+                  )}
                 </span>
               </button>
             </form>
+            
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-400">
                 Don't have an account?{' '}
