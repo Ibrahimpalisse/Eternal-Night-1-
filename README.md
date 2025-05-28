@@ -28,3 +28,7 @@ npm run dev
 
 - SMTP Host : `localhost`
 - SMTP Port : `1025`
+
+## créé les tables de la basse de donné
+   - aller sur :`cd backend`
+   - taper :`node setup-db.js`

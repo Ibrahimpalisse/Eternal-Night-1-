@@ -1,10 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import openBookLogo from '../../assets/open-book.svg';
 import { FormValidation } from '../../utils/validation';
-import { CheckCircle, AlertCircle } from 'lucide-react';
 
 // Composants pour les icônes d'œil
 const EyeIcon = () => (
@@ -20,55 +17,77 @@ const EyeSlashIcon = () => (
   </svg>
 );
 
-// Composant pour les indicateurs d'état des critères de mot de passe
-const PasswordCriterion = ({ met }) => (
-  <span className={`inline-flex items-center ${met ? 'text-green-500' : 'text-gray-500'}`}>
-    {met ? <CheckCircle className="h-3.5 w-3.5 mr-1" /> : <div className="h-3.5 w-3.5 mr-1 rounded-full border border-gray-500" />}
-  </span>
-);
-
 const Register = () => {
   const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    username: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    terms: false
+  });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [errors, setErrors] = useState({});
   
-  // Utiliser react-hook-form avec validation Zod
-  const { 
-    register, 
-    handleSubmit, 
-    formState: { errors, dirtyFields, isValid, isSubmitting },
-    watch 
-  } = useForm({
-    resolver: zodResolver(FormValidation.registerSchema),
-    mode: 'onChange',
-    defaultValues: {
-      username: '',
-      email: '',
-      password: '',
-      confirmPassword: '',
-      terms: false
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    const newValue = type === 'checkbox' ? checked : value;
+    
+    setFormData(prev => ({
+      ...prev,
+      [name]: newValue
+    }));
+
+    // Valider le champ après la saisie
+    if (['username', 'email', 'password', 'terms'].includes(name)) {
+      const validation = FormValidation.validateField(name, newValue);
+      if (!validation.success) {
+        setErrors(prev => ({ ...prev, [name]: validation.error }));
+      } else {
+        setErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors[name];
+          return newErrors;
+        });
+      }
     }
-  });
-  
-  // Observer les valeurs pour la validation en temps réel
-  const values = watch();
-  
-  // Vérifier les critères de mot de passe
-  const password = watch('password');
-  const passwordCriteria = {
-    length: password?.length >= 8,
-    uppercase: /[A-Z]/.test(password),
-    lowercase: /[a-z]/.test(password),
-    number: /[0-9]/.test(password),
-    special: /[@$!%*?&]/.test(password)
+
+    // Vérifier si les mots de passe correspondent
+    if (name === 'confirmPassword' || (name === 'password' && formData.confirmPassword)) {
+      const passwordToCheck = name === 'password' ? value : formData.password;
+      const confirmToCheck = name === 'confirmPassword' ? value : formData.confirmPassword;
+      
+      if (passwordToCheck && confirmToCheck && passwordToCheck !== confirmToCheck) {
+        setErrors(prev => ({ ...prev, confirmPassword: "Les mots de passe ne correspondent pas" }));
+      } else if (confirmToCheck) {
+        setErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors.confirmPassword;
+          return newErrors;
+        });
+      }
+    }
   };
-  
-  // Fonction appelée lorsque le formulaire est valide
-  const onSubmit = (data) => {
-    console.log('Form submitted with data:', data);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    
+    // Valider le formulaire complet
+    const validation = FormValidation.validateForm('register', formData);
+    
+    if (!validation.success) {
+      setErrors(validation.errors);
+      console.log('Erreurs de validation:', validation.errors);
+      return;
+    }
+    
+    // Si la validation réussit
+    console.log('Form submitted with data:', formData);
     // Ici, ajouter la logique pour l'envoi des données au serveur
   };
 
+  
   return (
     <div className="min-h-screen">
       <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]"></div>
@@ -98,7 +117,10 @@ const Register = () => {
         {/* Register form */}
         <div className="w-full max-w-md px-4 animate-fade-in-up">
           <div className="bg-white/[0.07] backdrop-blur-xl rounded-2xl p-6 md:p-8 border border-white/20 shadow-[0_8px_32px_rgb(0_0_0/0.4)] transition-all duration-300 hover:shadow-purple-500/10">
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Removed error and success message display */}
+              
+
               <div className="group">
                 <label htmlFor="username" className="block text-sm font-medium text-gray-300 mb-1.5 transition-colors group-focus-within:text-purple-400">
                   Username
@@ -106,24 +128,18 @@ const Register = () => {
                 <div className="relative">
                   <input
                     id="username"
+                    name="username"
                     type="text"
-                    className={`w-full px-4 py-2.5 bg-white/10 border ${errors.username ? 'border-red-500' : dirtyFields.username && !errors.username ? 'border-green-500' : 'border-white/20'} rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-purple-500/50 pr-10`}
+                    required
+                    value={formData.username}
+                    onChange={handleChange}
+                    className={`w-full px-4 py-2.5 bg-white/10 border ${errors.username ? 'border-red-500' : 'border-white/20'} rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-purple-500/50`}
                     placeholder="Choose a username"
                     dir="ltr"
-                    {...register('username')}
                   />
-                  {dirtyFields.username && (
-                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                      {errors.username ? (
-                        <AlertCircle className="h-5 w-5 text-red-500" />
-                      ) : (
-                        <CheckCircle className="h-5 w-5 text-green-500" />
-                      )}
-                    </div>
-                  )}
                 </div>
                 {errors.username && (
-                  <p className="mt-1 text-xs text-red-400">{errors.username.message}</p>
+                  <p className="mt-1 text-xs text-red-400">{errors.username}</p>
                 )}
               </div>
 
@@ -134,24 +150,18 @@ const Register = () => {
                 <div className="relative">
                   <input
                     id="email"
+                    name="email"
                     type="email"
-                    className={`w-full px-4 py-2.5 bg-white/10 border ${errors.email ? 'border-red-500' : dirtyFields.email && !errors.email ? 'border-green-500' : 'border-white/20'} rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-purple-500/50 pr-10`}
+                    required
+                    value={formData.email}
+                    onChange={handleChange}
+                    className={`w-full px-4 py-2.5 bg-white/10 border ${errors.email ? 'border-red-500' : 'border-white/20'} rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-purple-500/50`}
                     placeholder="Enter your email"
                     dir="ltr"
-                    {...register('email')}
                   />
-                  {dirtyFields.email && (
-                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                      {errors.email ? (
-                        <AlertCircle className="h-5 w-5 text-red-500" />
-                      ) : (
-                        <CheckCircle className="h-5 w-5 text-green-500" />
-                      )}
-                    </div>
-                  )}
                 </div>
                 {errors.email && (
-                  <p className="mt-1 text-xs text-red-400">{errors.email.message}</p>
+                  <p className="mt-1 text-xs text-red-400">{errors.email}</p>
                 )}
               </div>
 
@@ -159,117 +169,83 @@ const Register = () => {
                 <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-1.5 transition-colors group-focus-within:text-purple-400">
                   Password
                 </label>
-                <div className="relative">
+                <div className="relative group">
                   <input
                     id="password"
+                    name="password"
                     type={showPassword ? "text" : "password"}
-                    className={`w-full px-4 py-2.5 bg-white/10 border ${errors.password ? 'border-red-500' : dirtyFields.password && !errors.password ? 'border-green-500' : 'border-white/20'} rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-purple-500/50 pr-10`}
+                    required
+                    value={formData.password}
+                    onChange={handleChange}
+                    className={`w-full px-4 py-2.5 bg-white/10 border ${errors.password ? 'border-red-500' : 'border-white/20'} rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-purple-500/50`}
                     placeholder="Create a password"
                     dir="ltr"
-                    {...register('password')}
                   />
                   <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex space-x-2">
-                    {dirtyFields.password && (
-                      <div>
-                        {errors.password ? (
-                          <AlertCircle className="h-5 w-5 text-red-500" />
-                        ) : (
-                          <CheckCircle className="h-5 w-5 text-green-500" />
-                        )}
-                      </div>
-                    )}
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="text-gray-400 hover:text-white focus:outline-none transition-colors duration-200"
                     >
                       {showPassword ? (
-                        <EyeSlashIcon />
-                      ) : (
                         <EyeIcon />
+                      ) : (
+                        <EyeSlashIcon />
                       )}
                     </button>
                   </div>
                 </div>
-                
                 {errors.password && (
-                  <p className="mt-1 text-xs text-red-400">{errors.password.message}</p>
+                  <p className="mt-1 text-xs text-red-400">{errors.password}</p>
                 )}
-                
-                {/* Critères de mot de passe */}
-                {dirtyFields.password && (
-                  <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                      <PasswordCriterion met={passwordCriteria.length} />
-                      <span className={passwordCriteria.length ? 'text-white' : 'text-gray-500'}>8+ caractères</span>
-                    </div>
-                    <div>
-                      <PasswordCriterion met={passwordCriteria.uppercase} />
-                      <span className={passwordCriteria.uppercase ? 'text-white' : 'text-gray-500'}>Majuscule</span>
-                    </div>
-                    <div>
-                      <PasswordCriterion met={passwordCriteria.lowercase} />
-                      <span className={passwordCriteria.lowercase ? 'text-white' : 'text-gray-500'}>Minuscule</span>
-                    </div>
-                    <div>
-                      <PasswordCriterion met={passwordCriteria.number} />
-                      <span className={passwordCriteria.number ? 'text-white' : 'text-gray-500'}>Chiffre</span>
-                    </div>
-                    <div>
-                      <PasswordCriterion met={passwordCriteria.special} />
-                      <span className={passwordCriteria.special ? 'text-white' : 'text-gray-500'}>Caractère spécial</span>
-                    </div>
-                  </div>
-                )}
+                <p className="mt-2 text-xs text-gray-500">
+                  Password must contain at least 8 characters, one uppercase letter, one lowercase letter, one number and one special character
+                </p>
               </div>
 
               <div className="group">
                 <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300 mb-1.5 transition-colors group-focus-within:text-purple-400">
                   Confirm Password
                 </label>
-                <div className="relative">
+                <div className="relative group">
                   <input
                     id="confirmPassword"
+                    name="confirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
-                    className={`w-full px-4 py-2.5 bg-white/10 border ${errors.confirmPassword ? 'border-red-500' : dirtyFields.confirmPassword && !errors.confirmPassword ? 'border-green-500' : 'border-white/20'} rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-purple-500/50 pr-10`}
+                    required
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    className={`w-full px-4 py-2.5 bg-white/10 border ${errors.confirmPassword ? 'border-red-500' : 'border-white/20'} rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-purple-500/50`}
                     placeholder="Confirm your password"
                     dir="ltr"
-                    {...register('confirmPassword')}
                   />
                   <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex space-x-2">
-                    {dirtyFields.confirmPassword && (
-                      <div>
-                        {errors.confirmPassword ? (
-                          <AlertCircle className="h-5 w-5 text-red-500" />
-                        ) : (
-                          <CheckCircle className="h-5 w-5 text-green-500" />
-                        )}
-                      </div>
-                    )}
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                       className="text-gray-400 hover:text-white focus:outline-none transition-colors duration-200"
                     >
                       {showConfirmPassword ? (
-                        <EyeSlashIcon />
-                      ) : (
                         <EyeIcon />
+                      ) : (
+                        <EyeSlashIcon />
                       )}
                     </button>
                   </div>
                 </div>
                 {errors.confirmPassword && (
-                  <p className="mt-1 text-xs text-red-400">{errors.confirmPassword.message}</p>
+                  <p className="mt-1 text-xs text-red-400">{errors.confirmPassword}</p>
                 )}
               </div>
 
               <div className="flex items-start pt-2 group">
                 <input
                   id="terms"
+                  name="terms"
                   type="checkbox"
+                  checked={formData.terms}
+                  onChange={handleChange}
                   className={`h-4 w-4 mt-1 rounded border-gray-600 text-purple-500 focus:ring-purple-500 bg-white/10 transition-colors duration-200`}
-                  {...register('terms')}
                 />
                 <label htmlFor="terms" className={`ml-3 block text-sm ${errors.terms ? 'text-red-400' : 'text-gray-300'} group-hover:text-white transition-colors duration-200`}>
                   I agree to the{' '}
@@ -283,24 +259,16 @@ const Register = () => {
                 </label>
               </div>
               {errors.terms && (
-                <p className="mt-1 text-xs text-red-400">{errors.terms.message}</p>
+                <p className="mt-1 text-xs text-red-400">{errors.terms}</p>
               )}
 
               <button
                 type="submit"
-                disabled={!isValid || isSubmitting}
-                className={`group relative w-full bg-gradient-to-r from-purple-600 to-purple-500 text-white mt-6 py-2.5 px-4 rounded-xl flex justify-center items-center font-medium transition-all duration-300 shadow-lg shadow-purple-500/20 ${!isValid ? 'opacity-50 cursor-not-allowed' : 'hover:from-purple-500 hover:to-purple-400 hover:shadow-purple-500/30 transform hover:scale-[1.02] active:scale-[0.98]'}`}
+                className="group relative w-full bg-gradient-to-r from-purple-600 to-purple-500 text-white mt-6 py-2.5 px-4 rounded-xl flex justify-center items-center font-medium hover:from-purple-500 hover:to-purple-400 transition-all duration-300 shadow-lg shadow-purple-500/20 hover:shadow-purple-500/30 transform hover:scale-[1.02] active:scale-[0.98]"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-purple-400/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl"></div>
                 <span className="relative z-10 flex items-center">
-                  {isSubmitting ? (
-                    <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                      Creating Account...
-                    </>
-                  ) : (
-                    'Create Account'
-                  )}
+                  Create Account
                 </span>
               </button>
             </form>
