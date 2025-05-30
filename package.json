@@ -6,6 +6,8 @@
     "dev": "concurrently \"npm --prefix backend run dev\" \"npm --prefix frontend run dev\""
   },
   "dependencies": {
+    "react-toastify": "^11.0.5",
+    "uuid": "^11.1.0",
     "zod": "^3.25.30"
   }
 }

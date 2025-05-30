@@ -1,6 +1,7 @@
 const db = require('../db');
 const jwtMiddleware = require('../middleware/JwtMiddleware');
 const { sendVerificationEmail, sendPasswordResetEmail } = require('../services/emailService');
+const socketService = require('../services/socketService');
 
 class User {
   // Exposer la connexion à la base de données pour les contrôleurs
@@ -301,6 +302,11 @@ class User {
       // Envoyer l'email de réinitialisation avec le code au lieu du token
       await sendPasswordResetEmail(email, resetCode);
       
+      // Planifier l'émission de l'événement d'expiration après 5 minutes
+      setTimeout(() => {
+        socketService.emitPasswordResetTokenExpired(user.id);
+      }, 5 * 60 * 1000); // 5 minutes en millisecondes
+      
       return {
         success: true,
         message: 'Un email de réinitialisation de mot de passe a été envoyé. Il expirera dans 5 minutes.'
@@ -320,10 +326,28 @@ class User {
       );
       
       if (!rows.length) {
+        // Si le code est expiré ou invalide, émettre un événement via Socket.IO
+        // Note: Nous ne connaissons pas l'userId ici car le code est invalide ou expiré
+        // On peut émettre un événement général d'expiration
+        socketService.emitPasswordResetTokenExpired('unknown');
         throw new Error('Code de réinitialisation invalide ou expiré.');
       }
       
       const userId = rows[0].user_id;
+      
+      // Récupérer l'ancien mot de passe pour comparaison
+      const [userRows] = await db.execute('SELECT password FROM users WHERE id = ?', [userId]);
+      
+      if (!userRows.length) {
+        throw new Error('Utilisateur non trouvé.');
+      }
+      
+      const oldPassword = userRows[0].password;
+      
+      // Vérifier que le nouveau mot de passe est différent de l'ancien
+      if (newPassword === oldPassword) {
+        throw new Error('Le nouveau mot de passe doit être différent de l\'ancien.');
+      }
       
       // Mettre à jour le mot de passe
       await db.execute(

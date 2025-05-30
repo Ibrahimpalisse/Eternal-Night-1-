@@ -48,6 +48,20 @@ export class FormValidation {
     path: ["confirmPassword"]
   });
 
+  // Schéma pour le formulaire de mot de passe oublié
+  static forgotPasswordSchema = z.object({
+    email: this.email
+  });
+
+  // Schéma pour le formulaire de réinitialisation de mot de passe
+  static resetPasswordSchema = z.object({
+    password: this.password,
+    confirmPassword: z.string().min(1, { message: "La confirmation du mot de passe est requise" })
+  }).refine(data => data.password === data.confirmPassword, {
+    message: "Les mots de passe ne correspondent pas",
+    path: ["confirmPassword"]
+  });
+
   // Fonction pour valider un champ spécifique
   static validateField(field, value) {
     try {
@@ -90,6 +104,10 @@ export class FormValidation {
         this.loginSchema.parse(data);
       } else if (formType === 'register') {
         this.registerSchema.parse(data);
+      } else if (formType === 'forgotPassword') {
+        this.forgotPasswordSchema.parse(data);
+      } else if (formType === 'resetPassword') {
+        this.resetPasswordSchema.parse(data);
       }
       return { success: true };
     } catch (error) {

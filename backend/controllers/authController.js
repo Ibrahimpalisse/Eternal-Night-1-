@@ -39,7 +39,7 @@ exports.register = async (req, res) => {
 
 exports.login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, rememberMe } = req.body;
     
     // Vérifier si l'utilisateur existe
     const user = await User.findByEmail(email);
@@ -84,13 +84,37 @@ exports.login = async (req, res) => {
       roles
     });
     
+    // Générer un refresh token
+    const refreshToken = jwtMiddleware.generateRefreshToken({
+      id: user.id,
+      email: user.email
+    });
+    
     // Récupérer le profil utilisateur
     const profile = await User.getUserProfile(user.id);
     
-    // Réponse avec le token et les informations de l'utilisateur
+    // Définir la durée d'expiration des cookies en fonction de rememberMe
+    const maxAge = rememberMe ? 30 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000; // 30 jours ou 1 jour
+    
+    // Définir les options de sécurité pour les cookies
+    const cookieOptions = {
+      httpOnly: true, // Empêche l'accès via JavaScript
+      secure: process.env.NODE_ENV === 'production', // Cookies sécurisés en production
+      sameSite: 'strict', // Protection contre les attaques CSRF
+      maxAge: maxAge
+    };
+    
+    // Stocker les tokens dans des cookies sécurisés
+    res.cookie('access_token', token, cookieOptions);
+    res.cookie('refresh_token', refreshToken, {
+      ...cookieOptions,
+      path: '/api/auth/refresh-token' // Le refresh token n'est accessible que par cette route
+    });
+    
+    // Réponse avec le token (pour la compatibilité) et les informations de l'utilisateur
     res.json({
       success: true,
-      token,
+      token, // Conserver pour la compatibilité avec le frontend actuel
       user: {
         id: user.id,
         name: user.name,
@@ -194,6 +218,114 @@ exports.getCurrentUser = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Une erreur est survenue lors de la récupération des informations de l\'utilisateur.'
+    });
+  }
+};
+
+// Méthode pour vérifier la validité d'un token de réinitialisation de mot de passe
+exports.checkResetToken = async (req, res) => {
+  try {
+    const { code } = req.query;
+    
+    if (!code) {
+      return res.status(400).json({ valid: false, message: 'Code de réinitialisation manquant' });
+    }
+    
+    // Vérifier si le code existe et n'est pas expiré
+    const [rows] = await User.db.execute(
+      'SELECT user_id FROM verification WHERE password_reset_code = ? AND password_reset_expires > NOW()',
+      [code]
+    );
+    
+    if (!rows.length) {
+      return res.status(200).json({ valid: false, message: 'Code de réinitialisation invalide ou expiré' });
+    }
+    
+    return res.status(200).json({ valid: true, message: 'Code de réinitialisation valide' });
+  } catch (error) {
+    console.error('Erreur lors de la vérification du code de réinitialisation:', error);
+    return res.status(500).json({ valid: false, message: 'Erreur lors de la vérification du code de réinitialisation' });
+  }
+};
+
+// Méthode pour la déconnexion
+exports.logout = async (req, res) => {
+  try {
+    // Supprimer les cookies d'authentification
+    res.clearCookie('access_token');
+    res.clearCookie('refresh_token');
+    
+    // Pour l'instant, nous retournons simplement un succès
+    res.status(200).json({
+      success: true,
+      message: 'Déconnexion réussie'
+    });
+  } catch (error) {
+    console.error('Erreur lors de la déconnexion:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Une erreur est survenue lors de la déconnexion'
+    });
+  }
+};
+
+// Endpoint pour rafraîchir le token
+exports.refreshToken = async (req, res) => {
+  try {
+    const refreshToken = req.cookies.refresh_token;
+    
+    if (!refreshToken) {
+      return res.status(401).json({
+        success: false,
+        message: 'Refresh token manquant'
+      });
+    }
+    
+    // Vérifier et décoder le refresh token
+    const decoded = jwtMiddleware.verifyRefreshToken(refreshToken);
+    
+    // Récupérer l'utilisateur
+    const user = await User.getUserById(decoded.id);
+    
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Utilisateur non trouvé'
+      });
+    }
+    
+    // Récupérer les rôles de l'utilisateur
+    const roles = await User.getUserRoles(user.id);
+    
+    // Générer un nouveau token JWT
+    const newToken = jwtMiddleware.generateToken({
+      id: user.id,
+      email: user.email,
+      roles
+    });
+    
+    // Définir les options de sécurité pour les cookies
+    const cookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 24 * 60 * 60 * 1000 // 1 jour
+    };
+    
+    // Mettre à jour le cookie access_token
+    res.cookie('access_token', newToken, cookieOptions);
+    
+    // Réponse avec le nouveau token (pour la compatibilité)
+    res.json({
+      success: true,
+      token: newToken,
+      message: 'Token rafraîchi avec succès'
+    });
+  } catch (error) {
+    console.error('Erreur lors du rafraîchissement du token:', error);
+    res.status(401).json({
+      success: false,
+      message: 'Refresh token invalide ou expiré'
     });
   }
 };

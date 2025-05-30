@@ -1,43 +1,143 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import openBookLogo from '../../assets/open-book.svg';
 import { FormValidation } from '../../utils/validation';
-import SendVerificationEmail from '../../components/SendVerificationEmail';
+import User from '../../services/User';
+import { useToast } from '../../contexts/ToastContext';
+import EmailVerification from '../../components/EmailVerification';
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
-  const [showSendVerificationEmail, setShowSendVerificationEmail] = useState(false);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [showVerifyEmailAlert, setShowVerifyEmailAlert] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState('');
+  const navigate = useNavigate();
+  const toast = useToast();
   
   // Utiliser react-hook-form avec validation Zod
   const { 
     register, 
     handleSubmit, 
-    formState: { errors, isValid, isSubmitting }
+    formState: { errors, isValid, isSubmitting },
+    setError,
+    getValues,
+    reset
   } = useForm({
     resolver: zodResolver(FormValidation.loginSchema),
     mode: 'onChange',
     defaultValues: {
-      email: '',
-      password: '',
-      rememberMe: false
+    email: '',
+    password: '',
+    rememberMe: false
     }
   });
   
+  // Fonction appelée lorsque le formulaire est valide
+  const onSubmit = async (data) => {
+    try {
+      const result = await User.login(data);
+      
+      // Vérifier si l'email nécessite une vérification
+      if (result && result.requiresVerification) {
+        // Stocker l'email pour la vérification
+        setVerificationEmail(data.email);
+        // Afficher directement l'alerte de vérification pour simplifier le flux
+        setShowVerifyEmailAlert(true);
+        toast.warning("Veuillez vérifier votre email avant de vous connecter");
+        return;
+      }
+      
+      // Connexion réussie
+      toast.success("Connexion réussie");
+      navigate('/user/home'); // Redirection vers la page d'accueil
+      
+    } catch (error) {
+      // Vérifier si le message d'erreur concerne la vérification de l'email
+      const isEmailVerificationError = error.message && (
+        error.message.includes("vérifier votre email") ||
+        error.message.includes("email non vérifi") || 
+        error.message.includes("non vérifi") || 
+        error.message.includes("verifi") ||
+        error.message.includes("verification") ||
+        error.message.toLowerCase().includes("email not verified") ||
+        error.message.toLowerCase().includes("verify your email")
+      );
+      
+      if (isEmailVerificationError) {
+        // L'erreur concerne la vérification de l'email
+        
+        // Récupérer l'email du formulaire
+        const userEmail = data.email;
+        setVerificationEmail(userEmail);
+        
+        // Afficher la modal de vérification d'email
+        setShowVerifyEmailAlert(true);
+        
+        // Notification à l'utilisateur
+        toast.warning("Veuillez vérifier votre email avant de vous connecter");
+      } else {
+        // Autre type d'erreur
+        setError('root', { 
+          type: 'manual',
+          message: error.message || "Une erreur est survenue lors de la connexion"
+        });
+        toast.error(error.message || "Échec de la connexion");
+      }
+    }
+  };
+  
+  // Gérer la vérification réussie de l'email
+  const handleVerificationSuccess = async (email) => {
+    toast.success("Email vérifié avec succès");
+    setShowVerificationModal(false);
+    setShowVerifyEmailAlert(false);
+    
+    // Connecter l'utilisateur automatiquement
+    try {
+      const credentials = getValues();
+      const result = await User.login(credentials);
+      toast.success("Connexion réussie");
+      navigate('/user/home');
+    } catch (error) {
+      toast.error("Votre email a été vérifié, veuillez vous connecter à nouveau");
+      // Rafraîchir le formulaire
+      reset();
+    }
+  };
+
+  // Quand l'utilisateur clique sur "Vérifier maintenant" dans l'alerte
+  const handleVerifyNow = () => {
+    setShowVerifyEmailAlert(false);
+    setShowVerificationModal(true);
+    // Envoyer directement un nouveau code de vérification
+    handleResendVerification();
+  };
+  
   const handleForgotPasswordClick = (e) => {
     e.preventDefault();
-    setShowSendVerificationEmail(true);
+    navigate('/auth/forgot-password');
   };
-  
-  const handleClosePopup = () => {
-    setShowSendVerificationEmail(false);
+
+  // Gérer la fermeture de la modal de vérification
+  const handleVerificationCancel = () => {
+    setShowVerificationModal(false);
+    setShowVerifyEmailAlert(false);
+    // L'utilisateur a fermé la modal sans vérifier son email
+    toast.info("Vous devez vérifier votre email pour vous connecter");
   };
-  
-  // Fonction appelée lorsque le formulaire est valide
-  const onSubmit = (data) => {
-    console.log('Form submitted with data:', data);
-    // Ici, ajouter la logique pour l'envoi des données au serveur
+
+  // Renvoyer le code de vérification
+  const handleResendVerification = async () => {
+    if (!verificationEmail) return;
+    
+    try {
+      await User.resendVerification(verificationEmail);
+      toast.success("Un nouveau code de vérification a été envoyé à votre email");
+    } catch (error) {
+      toast.error(error.message || "Échec de l'envoi du code de vérification");
+    }
   };
 
   return (
@@ -82,13 +182,18 @@ const Login = () => {
                   Email address
                 </label>
                 <div className="relative">
-                  <input
-                    id="email"
-                    type="email"
+                <input
+                  id="email"
+                  type="email"
                     className={`w-full px-4 py-3 bg-white/10 border ${errors.email ? 'border-red-500' : 'border-white/20'} rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-purple-500/50`}
-                    placeholder="Enter your email"
+                  placeholder="Enter your email"
                     {...register('email')}
-                  />
+                />
+                  {errors.email && (
+                    <div className="mt-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20">
+                      <p className="text-sm text-red-500 font-medium">{errors.email.message}</p>
+                    </div>
+                  )}
                 </div>
               </div>
               
@@ -120,8 +225,19 @@ const Login = () => {
                       </svg>
                     )}
                   </button>
+                  {errors.password && (
+                    <div className="mt-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20">
+                      <p className="text-sm text-red-500 font-medium">{errors.password.message}</p>
+                    </div>
+                  )}
                 </div>
               </div>
+              
+              {errors.root && (
+                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                  <p className="text-sm text-red-500 font-medium">{errors.root.message}</p>
+                </div>
+              )}
               
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
@@ -136,13 +252,12 @@ const Login = () => {
                   </label>
                 </div>
                 <div className="text-sm">
-                  <button 
-                    type="button"
-                    onClick={handleForgotPasswordClick} 
+                  <Link 
+                    to="/auth/forgot-password" 
                     className="font-medium text-purple-400 hover:text-purple-300 transition-colors duration-200 hover:underline"
                   >
                     Mot de passe oublié ?
-                  </button>
+                  </Link>
                 </div>
               </div>
               
@@ -180,14 +295,16 @@ const Login = () => {
             </p>
           </div>
         </div>
-        
-        {/* Popup overlay for SendVerificationEmail */}
-         {showSendVerificationEmail && (
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
-            <div className="relative w-full max-w-md">
-              <div className="absolute top-4 right-8 z-10">
+      </div>
+      
+      {/* Alerte de vérification d'email */}
+      {showVerifyEmailAlert && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
+          <div className="relative w-full max-w-md mx-4">
+            <div className="bg-white/[0.07] backdrop-blur-xl rounded-2xl p-6 md:p-8 border border-white/20 shadow-[0_8px_32px_rgb(0_0_0/0.4)] transition-all duration-300">
+              <div className="absolute top-4 right-4 z-10">
                 <button 
-                  onClick={handleClosePopup}
+                  onClick={() => setShowVerifyEmailAlert(false)}
                   className="text-white/80 hover:text-white transition-all duration-200 bg-white/10 hover:bg-white/20 rounded-full p-1"
                   aria-label="Fermer"
                 >
@@ -196,11 +313,55 @@ const Login = () => {
                   </svg>
                 </button>
               </div>
-              <SendVerificationEmail />
+              
+              <div className="text-center mb-6">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-yellow-500/20 mb-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">Veuillez vérifier votre email avant de vous connecter</h3>
+                <p className="text-gray-300 mb-6">
+                  Votre adresse email <span className="font-medium text-yellow-300">{verificationEmail}</span> n'a pas encore été vérifiée. Veuillez vérifier votre email pour activer votre compte.
+                </p>
+                
+                <div className="space-y-3">
+                  <button
+                    type="button"
+                    onClick={handleVerifyNow}
+                    className="w-full py-3 px-4 bg-yellow-500 hover:bg-yellow-400 text-black font-medium rounded-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
+                  >
+                    Vérifier maintenant
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowVerifyEmailAlert(false)}
+                    className="w-full py-3 px-4 bg-white/10 hover:bg-white/20 text-white font-medium rounded-xl transition-all duration-200"
+                  >
+                    Plus tard
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+      
+      {/* Modal de vérification d'email */}
+      {showVerificationModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
+          <div className="relative w-full max-w-md">
+            
+            <EmailVerification
+              email={verificationEmail}
+              onVerificationSuccess={handleVerificationSuccess}
+              onCancel={handleVerificationCancel}
+              onResendCode={handleResendVerification}
+              showSendEmailForm={false}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -5,6 +5,7 @@ require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
+const cookieParser = require('cookie-parser');
 // const mysql = require('mysql2'); // Commenté si non utilisé directement ici
 
 // Importer votre middleware de sécurité principal
@@ -12,6 +13,10 @@ const securityMiddleware = require('./middleware/SecurityMiddleware');
 
 // Importer les routes
 const authRoutes = require('./routes/authRoutes');
+
+// Importer le service Socket.IO
+const socketService = require('./services/socketService');
+const corsMiddleware = require('./middleware/CorsMiddleware');
 
 const port = process.env.PORT || 4000;
 
@@ -21,11 +26,13 @@ const port = process.env.PORT || 4000;
     const app = express();
     const server = http.createServer(app);
 
-    // Configuration Socket.IO - Note: la configuration CORS ici est pour Socket.IO,
-    // pas pour les requêtes HTTP standard que le middleware Express gère.
+    // Configuration Socket.IO - utiliser le même middleware CORS que pour l'application
     const io = new Server(server, {
-      cors: { origin: '*' } // Peut être rendu plus spécifique en production
+      cors: corsMiddleware.corsOptions
     });
+
+    // Initialiser le service Socket.IO avec l'instance io
+    socketService.init(io);
 
     io.on('connection', (socket) => {
       console.log('Socket.IO: Un client est connecté');
@@ -51,6 +58,7 @@ const port = process.env.PORT || 4000;
     // Express body-parser middleware (souvent nécessaire pour traiter les corps de requêtes JSON/URL-encodées)
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
+    app.use(cookieParser(process.env.COOKIE_SECRET || 'votre_secret_cookies'));
     console.log('Middlewares Express JSON/URL-encoded appliqués.');
 
     // --- Fin Application des Middlewares de Sécurité ---

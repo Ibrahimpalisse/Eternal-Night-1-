@@ -2,60 +2,25 @@ const jwt = require('jsonwebtoken');
 
 class JwtMiddleware {
   constructor() {
-    this.secretKey = process.env.JWT_SECRET; // Utiliser la variable d'environnement si elle existe
+    this.secretKey = process.env.JWT_SECRET || 'votre_clé_secrète_jwt'; // Utiliser la variable d'environnement si elle existe
+    this.refreshSecretKey = process.env.JWT_REFRESH_SECRET || 'votre_clé_secrète_refresh'; // Clé pour les refresh tokens
     this.expiresIn = process.env.JWT_EXPIRES_IN || '1h'; // Utiliser la variable d'environnement si elle existe
+    this.refreshExpiresIn = process.env.JWT_REFRESH_EXPIRES_IN || '7d'; // Durée de vie des refresh tokens
   }
 
   // Méthode pour vérifier le token
   authenticateToken() {
     return (req, res, next) => {
-      // Je vais aussi logguer ici pour le débogage
       console.log('Middleware JWT: Vérification du token...');
-      const token = req.headers['authorization']?.split(' ')[1]; // Récupérer le token du header
-
-      if (!token) {
-        console.log('Middleware JWT: Aucun token trouvé.');
-        return res.sendStatus(401); // Unauthorized
-      }
-
-      jwt.verify(token, this.secretKey, (err, user) => {
-        if (err) {
-          console.log('Middleware JWT: Token invalide.', err.message);
-          return res.sendStatus(403); // Forbidden
-        }
-        console.log('Middleware JWT: Token valide. Utilisateur:', user);
-        req.user = user; // Ajouter l'utilisateur à la requête
-        next();
-      });
-    };
-  }
-
-  // Méthode pour générer un token
-  generateToken(user) {
-     console.log('Middleware JWT: Génération de token pour l\'utilisateur', user.id);
-    return jwt.sign({ id: user.id, role: user.role }, this.secretKey, { expiresIn: this.expiresIn });
-  }
-
-  // Méthode pour changer la clé secrète
-  setSecretKey(newSecretKey) {
-    this.secretKey = newSecretKey;
-  }
-
-  // Méthode pour changer la durée de validité du token
-  setExpiresIn(newExpiresIn) {
-    this.expiresIn = newExpiresIn;
-  }
-  // Dans JwtMiddleware.js, ajoutez ou modifiez la méthode authenticateToken
-authenticateToken() {
-    return (req, res, next) => {
-      console.log('Middleware JWT: Vérification du token...');
-      const token = req.headers['authorization']?.split(' ')[1];
-  
+      
+      // Récupérer le token du cookie ou du header
+      const token = req.cookies.access_token || req.headers['authorization']?.split(' ')[1];
+      
       if (!token) {
         console.log('Middleware JWT: Aucun token trouvé.');
         return res.status(401).json({ message: 'Accès non autorisé. Token requis.' });
       }
-  
+
       jwt.verify(token, this.secretKey, async (err, user) => {
         if (err) {
           console.log('Middleware JWT: Token invalide.', err.message);
@@ -81,6 +46,33 @@ authenticateToken() {
         }
       });
     };
+  }
+
+  // Méthode pour générer un token d'accès
+  generateToken(user) {
+    console.log('Middleware JWT: Génération de token pour l\'utilisateur', user.id);
+    return jwt.sign(user, this.secretKey, { expiresIn: this.expiresIn });
+  }
+
+  // Méthode pour générer un refresh token
+  generateRefreshToken(user) {
+    console.log('Middleware JWT: Génération de refresh token pour l\'utilisateur', user.id);
+    return jwt.sign(user, this.refreshSecretKey, { expiresIn: this.refreshExpiresIn });
+  }
+
+  // Méthode pour vérifier un refresh token
+  verifyRefreshToken(token) {
+    return jwt.verify(token, this.refreshSecretKey);
+  }
+
+  // Méthode pour changer la clé secrète
+  setSecretKey(newSecretKey) {
+    this.secretKey = newSecretKey;
+  }
+
+  // Méthode pour changer la durée de validité du token
+  setExpiresIn(newExpiresIn) {
+    this.expiresIn = newExpiresIn;
   }
 }
 

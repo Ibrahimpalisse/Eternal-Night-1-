@@ -1,7 +1,12 @@
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useState, useEffect, useCallback, useRef } from 'react';
-import openBookLogo from '../../assets/open-book.svg';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { FormValidation } from '../../utils/validation';
+import User from '../../services/User';
+import { useToast } from '../../contexts/ToastContext';
+import openBookLogo from '../../assets/open-book.svg';
+import EmailVerification from '../../components/EmailVerification';
 
 // Composants pour les icônes d'œil
 const EyeIcon = () => (
@@ -18,75 +23,76 @@ const EyeSlashIcon = () => (
 );
 
 const Register = () => {
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState('');
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
+  const toast = useToast();
+  
+  // Utiliser react-hook-form avec validation Zod
+  const { 
+    register, 
+    handleSubmit, 
+    formState: { errors, isValid, isSubmitting },
+    setError
+  } = useForm({
+    resolver: zodResolver(FormValidation.registerSchema),
+    mode: 'onChange',
+    defaultValues: {
     username: '',
     email: '',
     password: '',
     confirmPassword: '',
     terms: false
+    }
   });
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [errors, setErrors] = useState({});
   
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    const newValue = type === 'checkbox' ? checked : value;
-    
-    setFormData(prev => ({
-      ...prev,
-      [name]: newValue
-    }));
-
-    // Valider le champ après la saisie
-    if (['username', 'email', 'password', 'terms'].includes(name)) {
-      const validation = FormValidation.validateField(name, newValue);
-      if (!validation.success) {
-        setErrors(prev => ({ ...prev, [name]: validation.error }));
-      } else {
-        setErrors(prev => {
-          const newErrors = { ...prev };
-          delete newErrors[name];
-          return newErrors;
-        });
-      }
-    }
-
-    // Vérifier si les mots de passe correspondent
-    if (name === 'confirmPassword' || (name === 'password' && formData.confirmPassword)) {
-      const passwordToCheck = name === 'password' ? value : formData.password;
-      const confirmToCheck = name === 'confirmPassword' ? value : formData.confirmPassword;
+  // Fonction appelée lorsque le formulaire est valide
+  const onSubmit = async (data) => {
+    try {
+      const result = await User.register({
+        name: data.username,
+        email: data.email,
+        password: data.password
+      });
       
-      if (passwordToCheck && confirmToCheck && passwordToCheck !== confirmToCheck) {
-        setErrors(prev => ({ ...prev, confirmPassword: "Les mots de passe ne correspondent pas" }));
-      } else if (confirmToCheck) {
-        setErrors(prev => {
-          const newErrors = { ...prev };
-          delete newErrors.confirmPassword;
-          return newErrors;
+      if (result.success) {
+        toast.success("Inscription réussie! Veuillez vérifier votre email.");
+        // Ouvrir la modal de vérification d'email
+        setVerificationEmail(data.email);
+        setShowVerificationModal(true);
+      } else {
+        toast.error(result.message || "Une erreur est survenue lors de l'inscription");
+      }
+    } catch (error) {
+      // Gestion des erreurs spécifiques
+      if (error.message.includes("email")) {
+        setError('email', { 
+          type: 'manual',
+          message: error.message 
+        });
+      } else if (error.message.includes("username")) {
+        setError('username', { 
+          type: 'manual',
+          message: error.message 
+        });
+      } else {
+        setError('root', { 
+          type: 'manual',
+          message: error.message || "Une erreur est survenue lors de l'inscription"
         });
       }
+      toast.error(error.message || "Échec de l'inscription");
     }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    
-    // Valider le formulaire complet
-    const validation = FormValidation.validateForm('register', formData);
-    
-    if (!validation.success) {
-      setErrors(validation.errors);
-      console.log('Erreurs de validation:', validation.errors);
-      return;
-    }
-    
-    // Si la validation réussit
-    console.log('Form submitted with data:', formData);
-    // Ici, ajouter la logique pour l'envoi des données au serveur
+  // Gérer la vérification réussie de l'email
+  const handleVerificationSuccess = (email) => {
+    toast.success("Email vérifié avec succès! Vous pouvez maintenant vous connecter.");
+    setShowVerificationModal(false);
+    navigate('/auth/login'); // Redirection vers la page de connexion
   };
-
   
   return (
     <div className="min-h-screen">
@@ -117,158 +123,139 @@ const Register = () => {
         {/* Register form */}
         <div className="w-full max-w-md px-4 animate-fade-in-up">
           <div className="bg-white/[0.07] backdrop-blur-xl rounded-2xl p-6 md:p-8 border border-white/20 shadow-[0_8px_32px_rgb(0_0_0/0.4)] transition-all duration-300 hover:shadow-purple-500/10">
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Removed error and success message display */}
-              
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+              {errors.root && (
+                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                  <p className="text-sm text-red-500 font-medium">{errors.root.message}</p>
+                </div>
+              )}
 
               <div className="group">
-                <label htmlFor="username" className="block text-sm font-medium text-gray-300 mb-1.5 transition-colors group-focus-within:text-purple-400">
+                <label htmlFor="username" className="block text-sm font-medium text-gray-300 mb-2 transition-colors group-focus-within:text-purple-400">
                   Username
                 </label>
                 <div className="relative">
                   <input
                     id="username"
-                    name="username"
                     type="text"
-                    required
-                    value={formData.username}
-                    onChange={handleChange}
-                    className={`w-full px-4 py-2.5 bg-white/10 border ${errors.username ? 'border-red-500' : 'border-white/20'} rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-purple-500/50`}
+                    className={`w-full px-4 py-3 bg-white/10 border ${errors.username ? 'border-red-500' : 'border-white/20'} rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-purple-500/50`}
                     placeholder="Choose a username"
-                    dir="ltr"
+                    {...register('username')}
                   />
                 </div>
                 {errors.username && (
-                  <p className="mt-1 text-xs text-red-400">{errors.username}</p>
+                  <div className="mt-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20">
+                    <p className="text-sm text-red-500 font-medium">{errors.username.message}</p>
+                  </div>
                 )}
               </div>
 
               <div className="group">
-                <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-1.5 transition-colors group-focus-within:text-purple-400">
-                  Email
+                <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2 transition-colors group-focus-within:text-purple-400">
+                  Email address
                 </label>
                 <div className="relative">
                   <input
                     id="email"
-                    name="email"
                     type="email"
-                    required
-                    value={formData.email}
-                    onChange={handleChange}
-                    className={`w-full px-4 py-2.5 bg-white/10 border ${errors.email ? 'border-red-500' : 'border-white/20'} rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-purple-500/50`}
-                    placeholder="Enter your email"
-                    dir="ltr"
+                    className={`w-full px-4 py-3 bg-white/10 border ${errors.email ? 'border-red-500' : 'border-white/20'} rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-purple-500/50`}
+                    placeholder="your@email.com"
+                    {...register('email')}
                   />
                 </div>
                 {errors.email && (
-                  <p className="mt-1 text-xs text-red-400">{errors.email}</p>
+                  <div className="mt-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20">
+                    <p className="text-sm text-red-500 font-medium">{errors.email.message}</p>
+                  </div>
                 )}
               </div>
 
               <div className="group">
-                <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-1.5 transition-colors group-focus-within:text-purple-400">
+                <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2 transition-colors group-focus-within:text-purple-400">
                   Password
                 </label>
-                <div className="relative group">
+                <div className="relative">
                   <input
                     id="password"
-                    name="password"
                     type={showPassword ? "text" : "password"}
-                    required
-                    value={formData.password}
-                    onChange={handleChange}
-                    className={`w-full px-4 py-2.5 bg-white/10 border ${errors.password ? 'border-red-500' : 'border-white/20'} rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-purple-500/50`}
+                    className={`w-full px-4 py-3 bg-white/10 border ${errors.password ? 'border-red-500' : 'border-white/20'} rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-purple-500/50 pr-10`}
                     placeholder="Create a password"
-                    dir="ltr"
+                    {...register('password')}
                   />
-                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex space-x-2">
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="text-gray-400 hover:text-white focus:outline-none transition-colors duration-200"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white focus:outline-none transition-colors duration-200"
                     >
-                      {showPassword ? (
-                        <EyeIcon />
-                      ) : (
-                        <EyeSlashIcon />
-                      )}
+                    {showPassword ? <EyeSlashIcon /> : <EyeIcon />}
                     </button>
-                  </div>
                 </div>
                 {errors.password && (
-                  <p className="mt-1 text-xs text-red-400">{errors.password}</p>
+                  <div className="mt-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20">
+                    <p className="text-sm text-red-500 font-medium">{errors.password.message}</p>
+                  </div>
                 )}
-                <p className="mt-2 text-xs text-gray-500">
-                  Password must contain at least 8 characters, one uppercase letter, one lowercase letter, one number and one special character
-                </p>
               </div>
 
               <div className="group">
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300 mb-1.5 transition-colors group-focus-within:text-purple-400">
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300 mb-2 transition-colors group-focus-within:text-purple-400">
                   Confirm Password
                 </label>
-                <div className="relative group">
+                <div className="relative">
                   <input
                     id="confirmPassword"
-                    name="confirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
-                    required
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    className={`w-full px-4 py-2.5 bg-white/10 border ${errors.confirmPassword ? 'border-red-500' : 'border-white/20'} rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-purple-500/50`}
+                    className={`w-full px-4 py-3 bg-white/10 border ${errors.confirmPassword ? 'border-red-500' : 'border-white/20'} rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-purple-500/50 pr-10`}
                     placeholder="Confirm your password"
-                    dir="ltr"
+                    {...register('confirmPassword')}
                   />
-                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex space-x-2">
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="text-gray-400 hover:text-white focus:outline-none transition-colors duration-200"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white focus:outline-none transition-colors duration-200"
                     >
-                      {showConfirmPassword ? (
-                        <EyeIcon />
-                      ) : (
-                        <EyeSlashIcon />
-                      )}
+                    {showConfirmPassword ? <EyeSlashIcon /> : <EyeIcon />}
                     </button>
-                  </div>
                 </div>
                 {errors.confirmPassword && (
-                  <p className="mt-1 text-xs text-red-400">{errors.confirmPassword}</p>
+                  <div className="mt-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20">
+                    <p className="text-sm text-red-500 font-medium">{errors.confirmPassword.message}</p>
+                  </div>
                 )}
               </div>
 
-              <div className="flex items-start pt-2 group">
+              <div className="flex items-center">
                 <input
                   id="terms"
-                  name="terms"
                   type="checkbox"
-                  checked={formData.terms}
-                  onChange={handleChange}
-                  className={`h-4 w-4 mt-1 rounded border-gray-600 text-purple-500 focus:ring-purple-500 bg-white/10 transition-colors duration-200`}
+                  className="h-4 w-4 rounded border-gray-600 text-purple-500 focus:ring-purple-500 bg-white/10 transition-colors duration-200"
+                  {...register('terms')}
                 />
-                <label htmlFor="terms" className={`ml-3 block text-sm ${errors.terms ? 'text-red-400' : 'text-gray-300'} group-hover:text-white transition-colors duration-200`}>
-                  I agree to the{' '}
-                  <Link to="/terms" className="text-purple-400 hover:text-purple-300 hover:underline transition-colors duration-200">
-                    Terms of Service
-                  </Link>
-                  {' '}and{' '}
-                  <Link to="/privacy" className="text-purple-400 hover:text-purple-300 hover:underline transition-colors duration-200">
-                    Privacy Policy
-                  </Link>
+                <label htmlFor="terms" className="ml-2 block text-sm text-gray-300 hover:text-white transition-colors duration-200">
+                  J'accepte les <a href="#" className="text-purple-400 hover:text-purple-300 hover:underline">conditions d'utilisation</a>
                 </label>
               </div>
               {errors.terms && (
-                <p className="mt-1 text-xs text-red-400">{errors.terms}</p>
+                <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/20">
+                  <p className="text-sm text-red-500 font-medium">{errors.terms.message}</p>
+                </div>
               )}
 
               <button
                 type="submit"
-                className="group relative w-full bg-gradient-to-r from-purple-600 to-purple-500 text-white mt-6 py-2.5 px-4 rounded-xl flex justify-center items-center font-medium hover:from-purple-500 hover:to-purple-400 transition-all duration-300 shadow-lg shadow-purple-500/20 hover:shadow-purple-500/30 transform hover:scale-[1.02] active:scale-[0.98]"
+                disabled={!isValid || isSubmitting}
+                className={`group relative w-full bg-gradient-to-r from-purple-600 to-purple-500 text-white py-3 px-4 rounded-xl flex justify-center items-center font-medium transition-all duration-300 shadow-lg shadow-purple-500/20 ${!isValid ? 'opacity-50 cursor-not-allowed' : 'hover:from-purple-500 hover:to-purple-400 hover:shadow-purple-500/30 transform hover:scale-[1.02] active:scale-[0.98]'}`}
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-purple-400/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl"></div>
                 <span className="relative z-10 flex items-center">
-                  Create Account
+                  {isSubmitting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                      Creating account...
+                    </>
+                  ) : (
+                    'Create Account'
+                  )}
                 </span>
               </button>
             </form>
@@ -282,14 +269,28 @@ const Register = () => {
               </p>
             </div>
           </div>
-
-          <div className="text-center mt-6">
+          <div className="text-center mt-12 mb-8">
             <p className="text-xs text-gray-500 hover:text-gray-400 transition-colors duration-200">
               © {new Date().getFullYear()} Night Novels. All rights reserved.
             </p>
           </div>
         </div>
       </div>
+      
+      {/* Modal de vérification d'email */}
+      {showVerificationModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
+          <div className="relative w-full max-w-md">
+            
+            <EmailVerification
+              email={verificationEmail}
+              onVerificationSuccess={handleVerificationSuccess}
+              onCancel={() => setShowVerificationModal(false)}
+              showSendEmailForm={false}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

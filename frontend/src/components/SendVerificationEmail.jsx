@@ -1,14 +1,23 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FormValidation } from '../utils/validation'; // Assurez-vous d'importer la classe
+import { FormValidation } from '../utils/validation';
+import User from '../services/User';
+import { useToast } from '../contexts/ToastContext';
 
-const SendVerificationEmail = () => {
-  const [email, setEmail] = useState('');
+const SendVerificationEmail = ({ initialEmail = '', onEmailSent }) => {
+  const [email, setEmail] = useState(initialEmail);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [resendDisabled, setResendDisabled] = useState(false);
   const [resendCountdown, setResendCountdown] = useState(0);
   const emailInputRef = useRef(null);
+  const toast = useToast();
+
+  useEffect(() => {
+    if (initialEmail) {
+      setEmail(initialEmail);
+    }
+  }, [initialEmail]);
 
   // Handle input change
   const handleChange = (e) => {
@@ -29,16 +38,25 @@ const SendVerificationEmail = () => {
     setError('');
     setSuccessMessage('');
 
-    // Simulate sending email (replace with actual API call)
-    setTimeout(() => {
+    try {
+      // Appel à l'API pour envoyer le code de vérification
+      const result = await User.resendVerification(email);
+      
       setSuccessMessage('Un code de vérification a été envoyé à votre email.');
+      toast.success('Un code de vérification a été envoyé à votre email.');
       setResendDisabled(true);
       setResendCountdown(60);
-      setIsSubmitting(false);
-      if (emailInputRef.current) {
-        emailInputRef.current.value = ''; // Clear input
+      
+      // Si une fonction de callback est fournie, l'appeler
+      if (onEmailSent) {
+        onEmailSent(email);
       }
-    }, 2000);
+    } catch (error) {
+      setError(error.message || "Échec de l'envoi du code de vérification");
+      toast.error(error.message || "Échec de l'envoi du code de vérification");
+    } finally {
+      setIsSubmitting(false);
+      }
   };
 
   // Countdown timer for resend button
@@ -85,8 +103,8 @@ const SendVerificationEmail = () => {
           <div className="space-y-4">
             <button
               type="submit"
-              disabled={isSubmitting}
-              className={`w-full py-3 px-4 rounded-lg font-semibold transition-all duration-200 ${isSubmitting ? 'bg-gray-500/20 text-gray-400 cursor-not-allowed' : 'bg-purple-500 text-white hover:bg-purple-600'}`}
+              disabled={isSubmitting || resendDisabled}
+              className={`w-full py-3 px-4 rounded-lg font-semibold transition-all duration-200 ${isSubmitting || resendDisabled ? 'bg-gray-500/20 text-gray-400 cursor-not-allowed' : 'bg-purple-500 text-white hover:bg-purple-600'}`}
             >
               {isSubmitting ? 'Envoi en cours...' : 'Envoyer le code'}
             </button>
